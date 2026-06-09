@@ -31,6 +31,8 @@ export default function ExamProctor() {
   const [modelLoaded, setModelLoaded] = useState(false);
   const [noFaceSeconds, setNoFaceSeconds] = useState(0);
   const [loadError, setLoadError] = useState("");
+  const [cameraError, setCameraError] = useState("");
+  const [permissionState, setPermissionState] = useState("");
   const isAlarmingRef = useRef(false);
 
   const addLog = useCallback((msg, type = "info") => {
@@ -69,6 +71,21 @@ export default function ExamProctor() {
     };
     document.body.appendChild(tfScript);
   }, [addLog]);
+
+  useEffect(() => {
+    if (navigator.permissions?.query) {
+      const checkCameraPermission = async () => {
+        try {
+          const status = await navigator.permissions.query({ name: "camera" });
+          setPermissionState(status.state);
+          status.onchange = () => setPermissionState(status.state);
+        } catch (err) {
+          // Browser may not support permission query for camera
+        }
+      };
+      checkCameraPermission();
+    }
+  }, []);
 
   const playBeep = useCallback(() => {
     try {
@@ -206,11 +223,23 @@ export default function ExamProctor() {
       });
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
+      setCameraError("");
       setStatus(STATUS.MONITORING);
       addLog("Monitoring started", "success");
       animFrameRef.current = requestAnimationFrame(detect);
     } catch (e) {
-      addLog("Camera access denied", "alert");
+      let msg = "Camera access denied";
+      if (e?.name === "NotAllowedError" || e?.name === "PermissionDeniedError") {
+        msg = "Camera permission denied";
+      } else if (e?.name === "NotFoundError" || e?.name === "DevicesNotFoundError") {
+        msg = "No camera found";
+      } else if (e?.name === "NotReadableError" || e?.name === "TrackStartError") {
+        msg = "Camera is not available or already in use";
+      }
+      const fullMsg = `${msg}${e?.message ? `: ${e.message}` : ""}`;
+      setCameraError(fullMsg);
+      setStatus(STATUS.READY);
+      addLog(fullMsg, "alert");
     }
   };
 
@@ -415,6 +444,37 @@ export default function ExamProctor() {
               </div>
             )}
           </div>
+
+          {cameraError && (
+            <div style={{
+              marginTop: 12,
+              padding: "12px 16px",
+              borderRadius: 14,
+              background: "#2b0217",
+              border: "1px solid #7f1d1d",
+              color: "#fecaca",
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}>
+              {cameraError}
+            </div>
+          )}
+          {!cameraError && permissionState && permissionState !== "granted" && (
+            <div style={{
+              marginTop: 12,
+              padding: "12px 16px",
+              borderRadius: 14,
+              background: "#111827",
+              border: "1px solid #1f2937",
+              color: "#94a3b8",
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}>
+              {permissionState === "prompt"
+                ? "Camera permission will be requested when you start monitoring."
+                : `Camera permission status: ${permissionState}. If it is denied, allow camera access in your browser settings.`}
+            </div>
+          )}
 
           {/* Controls */}
           <div style={{ display: "flex", gap: 10, marginTop: 14 }}>

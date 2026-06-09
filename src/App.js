@@ -200,7 +200,10 @@ export default function ExamProctor() {
 
   const startMonitoring = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: { ideal: "user" } },
+        audio: false,
+      });
       videoRef.current.srcObject = stream;
       await videoRef.current.play();
       setStatus(STATUS.MONITORING);
@@ -304,24 +307,40 @@ export default function ExamProctor() {
       )}
 
       {/* Main content */}
-      <div style={{
-        flex: 1, display: "grid",
-        gridTemplateColumns: "1fr 280px",
-        gap: 0,
-        maxWidth: 960, width: "100%",
+      <div className="main-content" style={{
+        flex: 1,
+        maxWidth: 1120, width: "100%",
         margin: "0 auto", padding: "24px",
         boxSizing: "border-box",
-        alignItems: "start",
       }}>
         {/* Camera area */}
-        <div style={{ paddingRight: 20 }}>
+        <div className="camera-panel">
           <div style={{
+            marginBottom: 14,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: 12,
+          }}>
+            <div>
+              <div style={{ fontSize: 12, color: "#94a3b8", letterSpacing: 1.2, textTransform: "uppercase" }}>
+                Camera feed
+              </div>
+              <div style={{ fontSize: 20, fontWeight: 700, color: "#e2e8f0" }}>
+                Live proctoring view
+              </div>
+            </div>
+            <div style={{ fontSize: 12, color: "#94a3b8" }}>
+              {status === STATUS.MONITORING ? "Live" : status === STATUS.LOADING ? "Loading model" : "Ready to start"}
+            </div>
+          </div>
+          <div className="camera-card" style={{
             position: "relative",
-            borderRadius: 16,
+            borderRadius: 20,
             overflow: "hidden",
             background: "#0d0d1a",
             border: `1px solid ${isAlarming ? "#7f1d1d" : "#1e1e2e"}`,
-            aspectRatio: "16/10",
+            minHeight: 520,
             boxShadow: isAlarming
               ? "0 0 40px rgba(239,68,68,0.15)"
               : isMonitoring
@@ -335,14 +354,16 @@ export default function ExamProctor() {
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              transform: "scaleX(-1)",
               display: isMonitoring ? "block" : "none",
-            }} muted playsInline />
+            }} muted playsInline autoPlay />
             <canvas ref={canvasRef} style={{
               position: "absolute",
               inset: 0,
               width: "100%",
               height: "100%",
               objectFit: "cover",
+              transform: "scaleX(-1)",
               pointerEvents: "none",
               display: isMonitoring ? "block" : "none",
             }} />
@@ -432,7 +453,7 @@ export default function ExamProctor() {
         </div>
 
         {/* Right sidebar */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
+        <div className="sidebar-column" style={{ display: "flex", flexDirection: "column", gap: 14 }}>
           {/* Stats cards */}
           <div style={{
             background: "#0d0d1a", border: "1px solid #1e1e2e",
@@ -544,6 +565,41 @@ export default function ExamProctor() {
         @keyframes slide {
           0% { transform: translateX(-100%); }
           100% { transform: translateX(400%); }
+        }
+        .main-content {
+          display: grid;
+          grid-template-columns: 2.2fr 1fr;
+          gap: 20px;
+        }
+        .camera-panel {
+          width: 100%;
+        }
+        .camera-card {
+          min-height: 520px;
+        }
+        .sidebar-column {
+          width: 100%;
+        }
+        .camera-offline-note {
+          color: #94a3b8;
+          font-size: 13px;
+          margin-top: 10px;
+        }
+        @media (max-width: 960px) {
+          .main-content {
+            grid-template-columns: 1fr;
+          }
+          .camera-card {
+            min-height: 420px;
+          }
+        }
+        @media (max-width: 640px) {
+          .camera-card {
+            min-height: 320px;
+          }
+          .camera-card, .sidebar-column {
+            border-radius: 14px;
+          }
         }
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: #12121a; }
